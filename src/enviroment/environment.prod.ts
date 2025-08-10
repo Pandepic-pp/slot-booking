@@ -1,0 +1,1 @@
+export const BASE_URL: string = 'https://slot-booking-backend-aj0c.onrender.com/api/'
