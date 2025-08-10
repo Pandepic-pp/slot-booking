@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "./calender.css";
+import "./Calender.css";
 import axios from "axios";
 import { BASE_URL } from "../../enviroment/enviroment";
 
