@@ -1,0 +1,28 @@
+.dashboard-wrapper {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.dashboard-card {
+  width: 300px;
+  padding: 2rem;
+  background: var(--accent-bg);
+  border-radius: 12px;
+  border: 1px solid var(--accent-border);
+  box-shadow: 0 8px 24px rgba(51, 51, 51, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s, background 0.3s;
+  text-align: center;
+}
+
+.dashboard-card h2 {
+  margin-bottom: 0.8rem;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-4px);
+  background: #e8e8e8;
+}

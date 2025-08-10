@@ -1,0 +1,14 @@
+.btn {
+  padding: 0.9rem 2rem;
+  font-size: 1rem;
+  color: var(--accent-bg);
+  background-color: var(--text-color);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.btn:hover {
+  background-color: var(--muted-color);
+}

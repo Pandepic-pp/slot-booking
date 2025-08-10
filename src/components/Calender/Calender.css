@@ -1,0 +1,78 @@
+.calendar-wrapper {
+  overflow-x: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  background-color: var(--accent-bg);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+}
+
+th, td {
+  border: 1px solid var(--accent-border);
+  padding: 15px;
+  text-align: center;
+  font-size: 13px;
+  height: 40px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+.time-cell {
+  background-color: var(--accent-bg);
+  color: var(--muted-color);
+  font-weight: 500;
+}
+
+td:hover {
+  background-color: #e0f2fe;
+  cursor: pointer;
+}
+
+td.selected {
+  background-color: #2563eb !important;
+  color: white;
+  font-weight: 500;
+}
+
+td.disabled {
+  background-color: #313131;
+  cursor: not-allowed;
+}
+
+.calendar-wrapper {
+  overflow-x: auto; /* horizontal scroll if needed */
+  background-color: var(--accent-bg);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.slot {
+  padding: 8px;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid #ccc;
+}
+
+.slot.available {
+  background-color: #4caf50; /* Green */
+  color: white;
+}
+
+.slot.unavailable {
+  background-color: #f44336; /* Red */
+  color: white;
+  cursor: not-allowed;
+}
+
+.slot.selected {
+  background-color: #2196f3; /* Blue */
+  color: white;
+}
