@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./BookingList.css";
 import { BASE_URL } from "../../enviroment/enviroment";
-import { FaSearch, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
+import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 
 interface Booking {
   _id: string;
