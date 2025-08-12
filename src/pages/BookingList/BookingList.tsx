@@ -12,12 +12,10 @@ interface Booking {
   customerType: string;
   bookingType: string;
   status?: string;
-  id?: number;
   price?: number;
-  onDate?: string;
-  onTime?: string;
   forDate?: string;
   forTime?: string;
+  activatedAt?: string; // store timestamp when activated
 }
 
 const BookingList: React.FC = () => {
@@ -68,47 +66,70 @@ const BookingList: React.FC = () => {
     filterBookings(searchPhone, searchCenter);
   }, [searchPhone, searchCenter, allBookings]);
 
-  const updateBookingStatus = async (id: string, newStatus: string) => {
-    try {
-      // In a real application, you'd make an API call here:
-      // const res = await axios.patch(`${BASE_URL}bookings/${id}/status`, { status: newStatus });
-      
-      const updatedBookings = allBookings.map((booking) =>
-        booking._id === id ? { ...booking, status: newStatus } : booking
-      );
-      setAllBookings(updatedBookings);
-      alert(`Booking ${id} status changed to ${newStatus}.`);
-    } catch (err) {
-      console.error(`Error updating booking status for ${id}:`, err);
-      alert(`Failed to update booking status. Please try again.`);
-    }
+  const updateBookingStatus = (id: string, newStatus: string, activatedAt?: string) => {
+    setAllBookings((prev) =>
+      prev.map((booking) =>
+        booking._id === id ? { ...booking, status: newStatus, activatedAt } : booking
+      )
+    );
   };
 
   const handleActivate = (id: string) => {
-    updateBookingStatus(id, 'Active');
+    const now = new Date().toISOString();
+    updateBookingStatus(id, "Active", now);
+
+    // Store activation time in localStorage to survive reload
+    localStorage.setItem(`booking-${id}-activatedAt`, now);
   };
 
   const handleCancel = (id: string) => {
-    updateBookingStatus(id, 'Cancelled');
+    updateBookingStatus(id, "Cancelled");
+    localStorage.removeItem(`booking-${id}-activatedAt`);
   };
 
+  // Auto-complete active bookings after 15 mins
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+
+      setAllBookings((prev) =>
+        prev.map((booking) => {
+          if (booking.status === "Active") {
+            const storedTime = booking.activatedAt || localStorage.getItem(`booking-${booking._id}-activatedAt`);
+            if (storedTime) {
+              const elapsed = now - new Date(storedTime).getTime();
+              if (elapsed >= 15 * 60 * 1000) {
+                localStorage.removeItem(`booking-${booking._id}-activatedAt`);
+                return { ...booking, status: "Completed", activatedAt: undefined };
+              }
+            }
+          }
+          return booking;
+        })
+      );
+    }, 1000); // check every second
+
+    return () => clearInterval(interval);
+  }, []);
+
   const formatDateTime = (date?: string, time?: string) => {
-    if (!date) return 'N/A';
-    return `${date} at ${time || 'N/A'}`;
+    if (!date) return "N/A";
+    return `${date} at ${time || "N/A"}`;
   };
 
   const getStatusClass = (status?: string) => {
     switch (status?.toLowerCase()) {
-      case 'pending': return 'status-pending';
-      case 'active': return 'status-active';
-      case 'cancelled': return 'status-cancelled';
-      default: return '';
+      case "pending": return "status-pending";
+      case "active": return "status-active";
+      case "cancelled": return "status-cancelled";
+      case "completed": return "status-completed";
+      default: return "";
     }
   };
 
   return (
     <div className="booking-wrapper">
-      <div className="booking-container" style={{width: '1200px'}}>
+      <div className="booking-container" style={{ width: "1200px" }}>
         <h1>Booking List</h1>
         <div className="search-bar">
           <input
@@ -136,6 +157,7 @@ const BookingList: React.FC = () => {
             {bookings.map((b) => {
               const isActive = b.status?.toLowerCase() === "active";
               const isCancelled = b.status?.toLowerCase() === "cancelled";
+              const isCompleted = b.status?.toLowerCase() === "completed";
               return (
                 <div key={b._id} className="booking-card">
                   <div className="booking-header">
@@ -146,41 +168,27 @@ const BookingList: React.FC = () => {
                     </span>
                   </div>
                   <div className="booking-details">
-                    <p>
-                      <strong>Center:</strong> {b.center}
-                    </p>
-                    <p>
-                      <strong>Overs:</strong> {b.overs}
-                    </p>
-                    <p>
-                      <strong>Customer Type:</strong> {b.customerType}
-                    </p>
-                    <p>
-                      <strong>Booking Type:</strong> {b.bookingType}
-                    </p>
-                    <p>
-                      <strong>Booked For:</strong> {formatDateTime(b.forDate, b.forTime)}
-                    </p>
-                    <p>
-                      <strong>Price:</strong> Rs {b.price?.toFixed(2) || "N/A"}
-                    </p>
+                    <p><strong>Center:</strong> {b.center}</p>
+                    <p><strong>Overs:</strong> {b.overs}</p>
+                    <p><strong>Customer Type:</strong> {b.customerType}</p>
+                    <p><strong>Booking Type:</strong> {b.bookingType}</p>
+                    <p><strong>Booked For:</strong> {formatDateTime(b.forDate, b.forTime)}</p>
+                    <p><strong>Price:</strong> Rs {b.price?.toFixed(2) || "N/A"}</p>
                   </div>
                   <div className="booking-actions">
                     <button
-                      className={`btn-action btn-activate ${isActive || isCancelled ? "btn-disabled" : ""}`}
-                      onClick={() => !isActive && !isCancelled && handleActivate(b._id)}
-                      disabled={isActive || isCancelled}
+                      className={`btn-action btn-activate ${(isActive || isCancelled || isCompleted) ? "btn-disabled" : ""}`}
+                      onClick={() => !(isActive || isCancelled || isCompleted) && handleActivate(b._id)}
+                      disabled={isActive || isCancelled || isCompleted}
                     >
-                      <FaCheckCircle />
-                      Activate
+                      <FaCheckCircle /> Activate
                     </button>
                     <button
-                      className={`btn-action btn-cancel ${isCancelled || isActive ? "btn-disabled" : ""}`}
-                      onClick={() => !(isCancelled || isActive) && handleCancel(b._id)}
-                      disabled={isCancelled || isActive}
+                      className={`btn-action btn-cancel ${(isCancelled || isCompleted || isActive) ? "btn-disabled" : ""}`}
+                      onClick={() => !(isCancelled || isCompleted) && handleCancel(b._id)}
+                      disabled={isCancelled || isCompleted || isActive}
                     >
-                      <FaTimesCircle />
-                      Cancel
+                      <FaTimesCircle /> Cancel
                     </button>
                   </div>
                 </div>

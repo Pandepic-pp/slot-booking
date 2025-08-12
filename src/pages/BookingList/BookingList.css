@@ -253,6 +253,12 @@
   color: #64748b;
 }
 
+.status-completed {
+  background-color: #4caf50;
+  color: white;
+}
+
+
 @media (max-width: 768px) {
   .booking-container h1 {
     font-size: 2rem;
