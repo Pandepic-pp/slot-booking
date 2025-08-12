@@ -3,20 +3,8 @@ import axios from "axios";
 import "./BookingList.css";
 import { BASE_URL } from "../../enviroment/enviroment";
 import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
-
-interface Booking {
-  _id: string;
-  bookedBy: string;
-  center: string | number;
-  overs: number;
-  customerType: string;
-  bookingType: string;
-  status?: string;
-  price?: number;
-  forDate?: string;
-  forTime?: string;
-  activatedAt?: string; // store timestamp when activated
-}
+import { type Booking } from "../../models/booking";
+import { type Membership } from "../../models/membership";
 
 const BookingList: React.FC = () => {
   const [allBookings, setAllBookings] = useState<Booking[]>([]);
@@ -32,12 +20,49 @@ const BookingList: React.FC = () => {
     try {
       const res = await axios.get(`${BASE_URL}bookings`);
       setAllBookings(res.data);
+      // After fetching, check for expired bookings
+      handleExpiredBookings(res.data);
     } catch (err) {
       console.error("Error fetching bookings:", err);
       setError("Failed to load bookings. Please try again.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExpiredBookings = async (bookingsData: Booking[]) => {
+    const nowUTC = new Date();
+
+    const expired = bookingsData.filter((b) => {
+        return b.expiryTime && b.status?.toLowerCase() === "active" && new Date(b.expiryTime) < nowUTC
+      }
+    );
+
+    if(expired.length > 0) {
+      expired.forEach((booking) => {
+        axios.patch(`${BASE_URL}bookings`, {_id: booking._id, action: "completed",});
+      });
+      const refreshed = await axios.get(`${BASE_URL}bookings`);
+      setAllBookings(refreshed.data);
+    }
+    
+
+    // if (expired.length > 0) {
+    //   for (const booking of expired) {
+    //     try {
+    //       await axios.patch(`${BASE_URL}bookings`, {
+    //         _id: booking._id,
+    //         action: "completed",
+    //       });
+    //     } catch (err) {
+    //       console.error(`Error marking booking ${booking._id} as completed`, err);
+    //     }
+    //   }
+
+    //   // Refresh bookings after updates
+    //   const refreshed = await axios.get(`${BASE_URL}bookings`);
+    //   setAllBookings(refreshed.data);
+    // }
   };
 
   useEffect(() => {
@@ -49,8 +74,10 @@ const BookingList: React.FC = () => {
 
     if (phone.trim()) {
       const phoneLower = phone.trim().toLowerCase();
-      filtered = filtered.filter((b) =>
-        b.bookedBy.toLowerCase().includes(phoneLower)
+      filtered = filtered.filter(
+        (b) =>
+          b.bookedBy.toLowerCase().includes(phoneLower) ||
+          b.phone?.toLowerCase().includes(phoneLower)
       );
     }
     if (center.trim()) {
@@ -66,64 +93,80 @@ const BookingList: React.FC = () => {
     filterBookings(searchPhone, searchCenter);
   }, [searchPhone, searchCenter, allBookings]);
 
-  const updateBookingStatus = (id: string, newStatus: string, activatedAt?: string) => {
-    setAllBookings((prev) =>
-      prev.map((booking) =>
-        booking._id === id ? { ...booking, status: newStatus, activatedAt } : booking
-      )
-    );
+  const updateBookingStatus = async (id: string, newStatus: string) => {
+    try {
+      const response = await axios.patch(`${BASE_URL}bookings`, {
+        _id: id,
+        action: newStatus,
+      });
+      console.log(response.data);
+
+      setAllBookings((prev) =>
+        prev.map((booking) =>
+          booking._id === id
+            ? {
+                ...booking,
+                status: newStatus.toLowerCase(),
+                activatedAt:
+                  newStatus.toLowerCase() === "active"
+                    ? new Date().toISOString()
+                    : booking.activatedAt,
+              }
+            : booking
+        )
+      );
+    } catch (error) {
+      console.error("Error updating booking status:", error);
+    }
   };
 
-  const handleActivate = (id: string) => {
-    const now = new Date().toISOString();
-    updateBookingStatus(id, "Active", now);
+  async function checkPackage(phone: string | undefined): Promise<Membership[]> {
+    const res = await axios.post<Membership[]>(`${BASE_URL}get-memberships`, { phone });
+    return res.data;
+  }
 
-    // Store activation time in localStorage to survive reload
-    localStorage.setItem(`booking-${id}-activatedAt`, now);
+  const updatePackage = async (phone: string | undefined, overs: number) => {
+    try {
+      console.log(phone);
+      await axios.patch(`${BASE_URL}memberships`, { phone, overs });
+    } catch (err) {
+      console.error("Unable to update the package", err);
+    }
+  }
+
+  const handleActivate = async (id: Booking) => {
+    console.log(id);
+    updateBookingStatus(id._id, "active");
+    const membership = await checkPackage(id.bookedBy); 
+    if(membership) {
+      const updPackage = await updatePackage(id.bookedBy, id.overs);
+      console.log(updPackage);
+    }
   };
 
   const handleCancel = (id: string) => {
-    updateBookingStatus(id, "Cancelled");
-    localStorage.removeItem(`booking-${id}-activatedAt`);
+    updateBookingStatus(id, "cancelled");
   };
-
-  // Auto-complete active bookings after 15 mins
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date().getTime();
-
-      setAllBookings((prev) =>
-        prev.map((booking) => {
-          if (booking.status === "Active") {
-            const storedTime = booking.activatedAt || localStorage.getItem(`booking-${booking._id}-activatedAt`);
-            if (storedTime) {
-              const elapsed = now - new Date(storedTime).getTime();
-              if (elapsed >= 15 * 60 * 1000) {
-                localStorage.removeItem(`booking-${booking._id}-activatedAt`);
-                return { ...booking, status: "Completed", activatedAt: undefined };
-              }
-            }
-          }
-          return booking;
-        })
-      );
-    }, 1000); // check every second
-
-    return () => clearInterval(interval);
-  }, []);
 
   const formatDateTime = (date?: string, time?: string) => {
     if (!date) return "N/A";
-    return `${date} at ${time || "N/A"}`;
+    return `${date.split("T")[0].split("-").reverse().join("-")} at ${
+      time || "N/A"
+    }`;
   };
 
   const getStatusClass = (status?: string) => {
     switch (status?.toLowerCase()) {
-      case "pending": return "status-pending";
-      case "active": return "status-active";
-      case "cancelled": return "status-cancelled";
-      case "completed": return "status-completed";
-      default: return "";
+      case "pending":
+        return "status-pending";
+      case "active":
+        return "status-active";
+      case "cancelled":
+        return "status-cancelled";
+      case "completed":
+        return "status-completed";
+      default:
+        return "";
     }
   };
 
@@ -162,30 +205,59 @@ const BookingList: React.FC = () => {
                 <div key={b._id} className="booking-card">
                   <div className="booking-header">
                     <h3 className="booking-name">{b.bookedBy}</h3>
-                    <span className={`status-badge ${getStatusClass(b.status)}`}>
+                    <span
+                      className={`status-badge ${getStatusClass(b.status)}`}
+                    >
                       <span className="status-dot"></span>
                       {b.status || "Pending"}
                     </span>
                   </div>
                   <div className="booking-details">
-                    <p><strong>Center:</strong> {b.center}</p>
-                    <p><strong>Overs:</strong> {b.overs}</p>
-                    <p><strong>Customer Type:</strong> {b.customerType}</p>
-                    <p><strong>Booking Type:</strong> {b.bookingType}</p>
-                    <p><strong>Booked For:</strong> {formatDateTime(b.forDate, b.forTime)}</p>
-                    <p><strong>Price:</strong> Rs {b.price?.toFixed(2) || "N/A"}</p>
+                    <p>
+                      <strong>Center:</strong> {b.center}
+                    </p>
+                    <p>
+                      <strong>Overs:</strong> {b.overs}
+                    </p>
+                    <p>
+                      <strong>Customer Type:</strong> {b.customerType}
+                    </p>
+                    <p>
+                      <strong>Booking Type:</strong> {b.bookingType}
+                    </p>
+                    <p>
+                      <strong>Booked For:</strong>{" "}
+                      {formatDateTime(b.forDate, b.forTime)}
+                    </p>
+                    <p>
+                      <strong>Price:</strong> Rs{" "}
+                      {b.price?.toFixed(2) || "N/A"}
+                    </p>
                   </div>
                   <div className="booking-actions">
                     <button
-                      className={`btn-action btn-activate ${(isActive || isCancelled || isCompleted) ? "btn-disabled" : ""}`}
-                      onClick={() => !(isActive || isCancelled || isCompleted) && handleActivate(b._id)}
+                      className={`btn-action btn-activate ${
+                        isActive || isCancelled || isCompleted
+                          ? "btn-disabled"
+                          : ""
+                      }`}
+                      onClick={() =>
+                        !(isActive || isCancelled || isCompleted) &&
+                        handleActivate(b)
+                      }
                       disabled={isActive || isCancelled || isCompleted}
                     >
                       <FaCheckCircle /> Activate
                     </button>
                     <button
-                      className={`btn-action btn-cancel ${(isCancelled || isCompleted || isActive) ? "btn-disabled" : ""}`}
-                      onClick={() => !(isCancelled || isCompleted) && handleCancel(b._id)}
+                      className={`btn-action btn-cancel ${
+                        isCancelled || isCompleted || isActive
+                          ? "btn-disabled"
+                          : ""
+                      }`}
+                      onClick={() =>
+                        !(isCancelled || isCompleted) && handleCancel(b._id)
+                      }
                       disabled={isCancelled || isCompleted || isActive}
                     >
                       <FaTimesCircle /> Cancel

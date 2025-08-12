@@ -144,8 +144,7 @@ const BookingPage: React.FC = () => {
       if (response.status === 201 && formData.customerType === 'New Customer') {
         const newCustomer: Customer = {
           name: formData.name,
-          phone: formData.phone,
-          package: packageId || null
+          phone: formData.phone
         };
         const customerRes = await axios.post(`${BASE_URL}customers`, newCustomer);
         console.log("Customer created:", customerRes.data);
@@ -205,16 +204,12 @@ const BookingPage: React.FC = () => {
           <div className="form-row">
             <label>
               Customer Type:
-              <select
+              <input
                 name="customerType"
                 value={formData.customerType}
                 onChange={handleChange}
                 disabled={customerTypeLocked}
-              >
-                <option>New Customer</option>
-                <option>Existing Customer</option>
-              </select>
-              <span>{packageMessage}</span>
+              />
             </label>
 
             {(formData.customerType === "New Customer" || packageMessage === 'No packages taken' || oversLeft === 0) && (

@@ -256,6 +256,7 @@
 .status-completed {
   background-color: #4caf50;
   color: white;
+  padding-left: 0px;
 }
 
 
