@@ -7,6 +7,7 @@ import axios from "axios";
 import type { Customer } from "../../models/customer";
 import type { Membership } from "../../models/membership";
 import { BASE_URL } from '../../enviroment/enviroment';
+import { useNavigate } from "react-router-dom";
 
 interface FormData {
   name: string;
@@ -45,6 +46,7 @@ const BookingPage: React.FC = () => {
     status: 'Booked',
   });
 
+  const navigate = useNavigate();
   const [oversLeft, setOversLeft] = useState<number | null>(null);
   const [customerTypeLocked, setCustomerTypeLocked] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -199,7 +201,7 @@ const BookingPage: React.FC = () => {
       setCustomerTypeLocked(false);
       setOversLeft(null);
       setPackageMessage("");
-      alert("Booking successful!");
+      navigate("thank-you");
     } catch (error) {
       console.error("Booking failed:", error);
       setError("Booking failed. Please try again.");
