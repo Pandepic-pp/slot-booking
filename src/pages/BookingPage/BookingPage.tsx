@@ -243,7 +243,7 @@ const BookingPage: React.FC = () => {
                 <option value="">Select...</option>
                 {packages.map(item => (
                   <option key={item.id} value={item.id}>
-                    {item.package} overs
+                    {item.package} overs - Rs. {item.price}
                   </option>
                 ))}
               </select>

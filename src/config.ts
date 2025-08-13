@@ -54,26 +54,26 @@ export const centers: Center[] = [
 export const packages: Packages[] = [
     {
         id: 1,
-        package: 50,
+        package: 150,
         validity: 1,
-        price: 2000
+        price: 4000
     },
     {
         id: 2,
-        package: 100,
+        package: 300,
         validity: 3,
-        price: 3500
-    },
-    {
-        id: 3,
-        package: 200,
-        validity: 6,
         price: 6000
     },
     {
+        id: 3,
+        package: 1000,
+        validity: 6,
+        price: 10000
+    },
+    {
         id: 4,
-        package: 500,
+        package: 700,
         validity: 12,
-        price: 14000
+        price: 11000
     },
 ]
