@@ -19,6 +19,20 @@ interface FormData {
   status: 'Booked';
 }
 
+interface BookingPayload {
+  id: number;
+  bookedBy: string;
+  customerType: "New Customer" | "Existing Customer";
+  bookingType: "Package Buy" | "Pay and Play";
+  packageId: number;
+  center: number;
+  onDate: Date;
+  onTime: string;
+  forDate: Date;
+  forTime: string;
+  status: "Booked";
+}
+
 const BookingPage: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
     name: "",
@@ -31,36 +45,22 @@ const BookingPage: React.FC = () => {
     status: 'Booked',
   });
 
-  interface NewBookingPayload {
-    id: number;
-    bookedBy: string;
-    customerType: "New Customer" | "Existing Customer";
-    bookingType: "Package Buy" | "Pay and Play";
-    packageId: number;
-    center: number;
-    onDate: Date;
-    onTime: string;
-    forDate: Date;
-    forTime: string;
-    status: "Booked" | "Completed";
-  }
-
   const [oversLeft, setOversLeft] = useState<number | null>(null);
   const [customerTypeLocked, setCustomerTypeLocked] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [packageMessage, setPackageMessage] = useState("");
+  const [error, setError] = useState<string>("");
 
   // Utility to format time in 24-hour format (HH:mm:ss)
-  const formatTime = (timeString: string) => {
-    // If timeString is already in HH:mm format, convert to HH:mm:ss
+  const formatTime = (timeString: string): string => {
     if (timeString.includes(':') && timeString.split(':').length === 2) {
-      return `${timeString}`;
+      return `${timeString}:00`;
     }
     return timeString;
   };
 
   // Utility to get current time in HH:mm:ss format
-  const getCurrentTime = () => {
+  const getCurrentTime = (): string => {
     const now = new Date();
     return now.toLocaleTimeString("en-GB", {
       hour12: false,
@@ -71,31 +71,45 @@ const BookingPage: React.FC = () => {
   };
 
   async function checkCustomer(phone: string): Promise<Customer[]> {
-    const res = await axios.post<Customer[]>(`${BASE_URL}get-customers`, { phone });
-    return res.data;
+    try {
+      const res = await axios.post<Customer[]>(`${BASE_URL}get-customers`, { phone });
+      return res.data;
+    } catch (error) {
+      console.error("Error checking customer:", error);
+      return [];
+    }
   }
 
   async function checkPackage(phone: string): Promise<Membership[]> {
-    const res = await axios.post<Membership[]>(`${BASE_URL}get-memberships`, { phone });
-    return res.data;
+    try {
+      const res = await axios.post<Membership[]>(`${BASE_URL}get-memberships`, { phone });
+      return res.data;
+    } catch (error) {
+      console.error("Error checking package:", error);
+      return [];
+    }
   }
 
   // Check if customer exists and retrieve packages
   const handlePhoneBlur = async () => {
-    if (!formData.phone) return;
+    if (!formData.phone) {
+      setError("Phone number is required");
+      return;
+    }
 
-    const customer = await checkCustomer(formData.phone);
+    setError("");
+    const customers = await checkCustomer(formData.phone);
 
-    if (customer.length === 1) {
+    if (customers.length === 1) {
       setFormData((prev) => ({ ...prev, customerType: "Existing Customer" }));
-      const membership = await checkPackage(formData.phone);
-      membership.sort((a, b) => b.package_id - a.package_id);
+      const memberships = await checkPackage(formData.phone);
+      memberships.sort((a, b) => Number(b.package_id) - Number(a.package_id));
 
-      if (membership.length > 0) {
-        setOversLeft(membership[0].oversLeft);
-        setPackageMessage(`${membership[0].oversLeft} overs left`);
+      if (memberships.length > 0) {
+        setOversLeft(memberships[0].oversLeft);
+        setPackageMessage(`${memberships[0].oversLeft} overs left`);
       } else {
-        setPackageMessage(`No packages taken`);
+        setPackageMessage("No packages taken");
       }
     } else {
       setFormData((prev) => ({ ...prev, customerType: "New Customer" }));
@@ -117,25 +131,36 @@ const BookingPage: React.FC = () => {
   };
 
   // Submit booking
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
 
     if (formData.selectedSlots.length === 0) {
-      alert("Please select at least one slot");
+      setError("Please select at least one slot");
       return;
     }
 
+    if (!formData.center) {
+      setError("Please select a center");
+      return;
+    }
+
+    setError("");
+
     const centerItem = centers.find((center) => center.id === parseInt(formData.center));
 
-    let selectedPackage = {};
+    let selectedPackage: Packages | undefined;
     let packageId = 0;
 
     if (formData.bookingType === 'Package Buy') {
-      selectedPackage = packages.find((item) => item.id === parseInt(formData.packageId)) || {};
-      packageId = (selectedPackage as Packages)?.id ?? 0;
+      selectedPackage = packages.find((item) => item.id === parseInt(formData.packageId));
+      if (!selectedPackage) {
+        setError("Please select a valid package");
+        return;
+      }
+      packageId = selectedPackage.id;
     }
 
-    const formBody: NewBookingPayload[] = formData.selectedSlots.map((slot, i) => ({
+    const formBody: BookingPayload[] = formData.selectedSlots.map((slot, i) => ({
       id: i + 1,
       bookedBy: formData.phone,
       customerType: formData.customerType,
@@ -143,28 +168,24 @@ const BookingPage: React.FC = () => {
       packageId,
       center: centerItem ? centerItem.id : 1,
       onDate: new Date(),
-      onTime: getCurrentTime(), // current time in 24-hour format
-      forDate: new Date(slot.date), // slot date as Date object
-      forTime: formatTime(slot.time), // slot time in HH:mm:ss format
+      onTime: getCurrentTime(),
+      forDate: new Date(slot.date),
+      forTime: formatTime(slot.time),
       status: "Booked"
     }));
 
     try {
-      console.log('Submitting booking data:', formBody);
       const response = await axios.post(`${BASE_URL}bookings`, formBody);
-      console.log('Booking response:', response.data);
-
+      
       if (response.status === 201 && formData.customerType === 'New Customer') {
         const newCustomer: Customer = {
           name: formData.name,
           phone: formData.phone
         };
-        const customerRes = await axios.post(`${BASE_URL}customers`, newCustomer);
-        console.log("Customer created:", customerRes.data);
+        await axios.post(`${BASE_URL}customers`, newCustomer);
       }
 
-      // Reset form or show success message
-      alert("Booking successful!");
+      // Reset form
       setFormData({
         name: "",
         phone: "",
@@ -178,9 +199,10 @@ const BookingPage: React.FC = () => {
       setCustomerTypeLocked(false);
       setOversLeft(null);
       setPackageMessage("");
+      alert("Booking successful!");
     } catch (error) {
       console.error("Booking failed:", error);
-      alert("Booking failed. Please try again.");
+      setError("Booking failed. Please try again.");
     }
   };
 
@@ -188,7 +210,8 @@ const BookingPage: React.FC = () => {
     <div className="booking-wrapper h-200">
       <div className="booking-container">
         <h1>Book Your Slot</h1>
-        <form onSubmit={handleSubmit} className="booking-form">
+        {error && <p className="error-message">{error}</p>}
+        <div className="booking-form">
           <div className="form-row">
             <label>
               Name:
@@ -208,9 +231,9 @@ const BookingPage: React.FC = () => {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
+                onBlur={handlePhoneBlur}
                 required
               />
-              <span className="verify" onClick={handlePhoneBlur}>verify</span>
             </label>
           </div>
 
@@ -218,10 +241,12 @@ const BookingPage: React.FC = () => {
             <label>
               Customer Type:
               <input
+                type="text"
                 name="customerType"
                 value={formData.customerType}
                 onChange={handleChange}
                 disabled={customerTypeLocked}
+                readOnly
               />
             </label>
 
@@ -233,8 +258,8 @@ const BookingPage: React.FC = () => {
                   value={formData.bookingType}
                   onChange={handleChange}
                 >
-                  <option>Package Buy</option>
-                  <option>Pay and Play</option>
+                  <option value="Package Buy">Package Buy</option>
+                  <option value="Pay and Play">Pay and Play</option>
                 </select>
               </label>
             )}
@@ -278,7 +303,6 @@ const BookingPage: React.FC = () => {
             </select>
           </label>
 
-          {/* Display selected slots */}
           {formData.selectedSlots.length > 0 && (
             <div className="selected-slots">
               <h3>Selected Slots:</h3>
@@ -290,7 +314,6 @@ const BookingPage: React.FC = () => {
             </div>
           )}
 
-          {/* Calendar Modal */}
           <Button
             type="button"
             className="btn-secondary"
@@ -317,10 +340,10 @@ const BookingPage: React.FC = () => {
             </div>
           )}
 
-          <Button type="submit" className="btn-primary">
+          <Button type="button" className="btn-primary" onClick={handleSubmit}>
             Book Now
           </Button>
-        </form>
+        </div>
       </div>
     </div>
   );
