@@ -1,15 +1,15 @@
 export interface Booking {
-  _id: string;
+  id: number;
   bookedBy: string;
-  phone?: string;
-  center: string | number;
-  overs: number;
   customerType: string;
   bookingType: string;
-  status?: string;
-  price?: number;
-  forDate?: string;
-  forTime?: string;
-  activatedAt?: string;
-  expiryTime?: string; // Added for expiry check
+  packageId: number;
+  center: number;
+  onDate: Date;
+  onTime: string;
+  forDate: Date;
+  forTime: string;
+  status: string;
+  activationTime: string,
+  expiryTime: string
 }

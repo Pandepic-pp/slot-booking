@@ -7,7 +7,6 @@ import axios from "axios";
 import type { Customer } from "../../models/customer";
 import type { Membership } from "../../models/membership";
 import { BASE_URL } from '../../enviroment/enviroment';
-import type { Booking } from "../../models/booking";
 
 interface FormData {
   name: string;
@@ -31,6 +30,20 @@ const BookingPage: React.FC = () => {
     selectedSlots: [],
     status: 'Booked',
   });
+
+  interface NewBookingPayload {
+    id: number;
+    bookedBy: string;
+    customerType: "New Customer" | "Existing Customer";
+    bookingType: "Package Buy" | "Pay and Play";
+    packageId: number;
+    center: number;
+    onDate: Date;
+    onTime: string;
+    forDate: Date;
+    forTime: string;
+    status: "Booked" | "Completed";
+  }
 
   const [oversLeft, setOversLeft] = useState<number | null>(null);
   const [customerTypeLocked, setCustomerTypeLocked] = useState(false);
@@ -122,7 +135,7 @@ const BookingPage: React.FC = () => {
       packageId = (selectedPackage as Packages)?.id ?? 0;
     }
 
-    const formBody: Booking[] = formData.selectedSlots.map((slot, i) => ({
+    const formBody: NewBookingPayload[] = formData.selectedSlots.map((slot, i) => ({
       id: i + 1,
       bookedBy: formData.phone,
       customerType: formData.customerType,
@@ -133,12 +146,12 @@ const BookingPage: React.FC = () => {
       onTime: getCurrentTime(), // current time in 24-hour format
       forDate: new Date(slot.date), // slot date as Date object
       forTime: formatTime(slot.time), // slot time in HH:mm:ss format
-      status: "Booked",
+      status: "Booked"
     }));
 
     try {
       console.log('Submitting booking data:', formBody);
-      let response = await axios.post(`${BASE_URL}bookings`, formBody);
+      const response = await axios.post(`${BASE_URL}bookings`, formBody);
       console.log('Booking response:', response.data);
 
       if (response.status === 201 && formData.customerType === 'New Customer') {
