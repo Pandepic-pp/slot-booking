@@ -3,7 +3,7 @@ import LoginPage from "./pages/LoginPage/LoginPage";
 import BookingPage from "./pages/BookingPage/BookingPage";
 import Dashboard from "./pages/LandingPage/LandingPage";
 import BookingList from "./pages/BookingList/BookingList";
-import { Analytics } from "@vercel/analytics/react"
+
 
 function App() {
   return (
@@ -16,7 +16,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </Router>
-    <Analytics />
+    
     </>
   );
 }
