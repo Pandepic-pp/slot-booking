@@ -227,7 +227,7 @@ const BookingList: React.FC = () => {
                     </p>
                     <p>
                       <strong>Booked For:</strong>{" "}
-                      {formatDateTime(b.forDate.toISOString(), b.forTime)}
+                      {formatDateTime(new Date(b.forDate).toISOString(), b.forTime)}
                     </p>
                     <p>
                       <strong>Price:</strong> Rs{" "}
