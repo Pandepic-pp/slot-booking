@@ -40,7 +40,7 @@ const BookingList: React.FC = () => {
 
     if(expired.length > 0) {
       expired.forEach((booking) => {
-        axios.patch(`${BASE_URL}bookings`, {_id: booking._id, action: "completed",});
+        axios.patch(`${BASE_URL}bookings`, {_id: booking._id, action: "completed"});
       });
       const refreshed = await axios.get(`${BASE_URL}bookings`);
       setAllBookings(refreshed.data);
@@ -139,7 +139,7 @@ const BookingList: React.FC = () => {
     updateBookingStatus(id._id, "active");
     const membership = await checkPackage(id.bookedBy); 
     if(membership) {
-      const updPackage = await updatePackage(id.bookedBy, id.overs);
+      const updPackage = await updatePackage(id.bookedBy, parseInt(id.overs));
       console.log(updPackage);
     }
   };
@@ -227,7 +227,7 @@ const BookingList: React.FC = () => {
                     </p>
                     <p>
                       <strong>Booked For:</strong>{" "}
-                      {formatDateTime(b.forDate, b.forTime)}
+                      {formatDateTime(b.forDate.toISOString(), b.forTime)}
                     </p>
                     <p>
                       <strong>Price:</strong> Rs{" "}

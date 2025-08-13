@@ -1,4 +1,6 @@
 export interface Booking {
+  _id: string;
+  phone: string;
   id: number;
   bookedBy: string;
   customerType: string;
@@ -11,5 +13,8 @@ export interface Booking {
   forTime: string;
   status: string;
   activationTime: string,
-  expiryTime: string
+  expiryTime: string,
+  activatedAt: string,
+  overs: string,
+  price: number
 }
