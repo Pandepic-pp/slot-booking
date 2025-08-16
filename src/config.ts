@@ -76,4 +76,16 @@ export const packages: Packages[] = [
         validity: 12,
         price: 11000
     },
+    {
+        id: 5,
+        package: Number.POSITIVE_INFINITY,
+        validity: 3,
+        price: 20000
+    },
+    {
+        id: 6,
+        package: Number.POSITIVE_INFINITY,
+        validity: 0.03,
+        price: 2000
+    }
 ]
