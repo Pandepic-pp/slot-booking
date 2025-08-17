@@ -20,6 +20,7 @@ import {
   FaMoneyBillWave,
   FaUsers,
 } from "react-icons/fa";
+import { BASE_URL } from '../../enviroment/enviroment';
 
 // Register Chart.js components
 ChartJS.register(
@@ -153,11 +154,11 @@ const DashboardPage: React.FC = () => {
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState("all");
+  const dateRange: string = "all";
 
   useEffect(() => {
     axios
-      .post<Membership[]>("http://localhost:3000/api/get-memberships", {})
+      .post<Membership[]>(`${BASE_URL}get-memberships`, {})
       .then((res) => {
         const cleaned = res.data.map((m) => ({
           ...m,
@@ -221,13 +222,13 @@ const DashboardPage: React.FC = () => {
   const activePackagesCount = filteredMemberships.filter(
     (m) => m.status === "Running"
   ).length;
-  const avgUtilization =
-    filteredMemberships.length > 0
-      ? filteredMemberships.reduce(
-          (a, b) => a + (b.totalOvers - b.oversLeft) / b.totalOvers,
-          0
-        ) / filteredMemberships.length
-      : 0;
+  // const avgUtilization =
+  //   filteredMemberships.length > 0
+  //     ? filteredMemberships.reduce(
+  //         (a, b) => a + (b.totalOvers - b.oversLeft) / b.totalOvers,
+  //         0
+  //       ) / filteredMemberships.length
+  //     : 0;
 
   // Chart data
   const monthlyRevenueData = getRevenueByMonth(filteredMemberships, 6); // 👈 last 6 months

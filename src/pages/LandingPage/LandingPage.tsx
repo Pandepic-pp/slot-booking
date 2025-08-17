@@ -16,6 +16,11 @@ const Dashboard: React.FC = () => {
         <h2>📋 Booking List</h2>
         <p>View and search existing bookings.</p>
       </div>
+
+      <div className="dashboard-card" onClick={() => navigate("/dashboard-page")}>
+        <h2>📈 Analytics Dashboard</h2>
+        <p>View analytics and statistics for your bookings.</p>
+      </div>
     </div>
   );
 };
